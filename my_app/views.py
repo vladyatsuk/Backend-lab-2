@@ -78,3 +78,76 @@ def category_delete():
     else:
         del categories[category_id]
         return {'message': f'Category {category_id} deleted successfully'}
+
+@app.get('/record/<record_id>')
+def record_get(record_id):
+    if record_id not in records:
+        return {'error': f'No record found with id {record_id}'}, 404
+    else:
+        return records[record_id]
+
+@app.delete('/record/<record_id>')
+def record_delete(record_id):
+    if record_id not in records:
+        return {'error': f'No record found with id {record_id}'}, 404
+    else:
+        del records[record_id]
+        return {'message': f'Category {record_id} deleted successfully'}
+
+@app.post('/record')
+def record_add():
+    content_type = request.headers.get('Content-Type')
+    if content_type == 'application/json':
+        user_id = request.json['user_id']
+        category_id = request.json['category_id']
+        amount = request.json['amount']
+    else:
+        user_id = request.args.get('user_id')
+        category_id = request.args.get('category_id')
+        amount = request.args.get('amount')
+    if not user_id or not category_id or not amount:
+        return {'error': 'User id, Category id, and Amount are required'}, 400
+    if user_id not in users:
+        return {'error': 'User not found'}, 404
+    if category_id not in categories:
+        return {'error': 'Category not found'}, 404 
+    record_id = uuid.uuid4().hex
+    timestamp = datetime.now().isoformat()
+    record = {
+        'id': record_id,
+        'user_id': user_id,
+        'category_id': category_id,
+        'timestamp': timestamp,
+        'amount': amount
+    }
+    records[record_id] = record
+    return record
+
+@app.get('/record')
+def records_get():
+    user_id = request.args.get('user_id')
+    category_id = request.args.get('category_id')
+    if user_id and user_id not in users:
+        return {'error': 'User not found'}, 404
+    if category_id and category_id not in categories:
+        return {'error': 'Category not found'}, 404
+    if user_id and category_id:
+        user_category_records = [
+                record for record in records.values() if
+                record['user_id'] == user_id and 
+                record['category_id'] == category_id
+            ]
+        return user_category_records
+    elif user_id:
+        user_records = [
+            record for record in records.values() if record['user_id'] == user_id
+        ]
+        return user_records
+    elif category_id:
+        category_records = [
+            record for record in records.values() if
+            record['category_id'] == category_id
+        ]
+        return category_records
+    else:
+        return {'error': 'At least one of User id or Category id is required'}, 400
